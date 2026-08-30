@@ -5,22 +5,14 @@ import requests
 import pdfplumber
 from flask import Flask, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
-
-#  SETUP
+# SETUP
 app = Flask(__name__, static_folder="static")
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20 MB
 
 UPLOAD_FOLDER = "/tmp/studyai"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-
-app = Flask(__name__, static_folder="static")
-app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  
-
-UPLOAD_FOLDER = "C:/tmp/studyai"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-GROQ_API_KEY = "Groq_API"
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 HEADERS = {
@@ -28,7 +20,6 @@ HEADERS = {
     "Content-Type": "application/json",
 }
 
-# Free model — very fast (300 tokens/sec), generous free limits
 MODEL = "llama-3.1-8b-instant"
 
 
