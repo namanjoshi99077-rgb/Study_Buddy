@@ -5,30 +5,28 @@ import requests
 import pdfplumber
 from flask import Flask, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
-# SETUP
+
+# ── SETUP ──
 app = Flask(__name__, static_folder="static")
-app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20 MB
+app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
 
 UPLOAD_FOLDER = "/tmp/studyai"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 HEADERS = {
     "Authorization": f"Bearer {GROQ_API_KEY}",
     "Content-Type": "application/json",
 }
+MODEL = "mixtral-8x7b-32768"
 
-MODEL = "llama-3.1-8b-instant"
-
-
+# ── SERVE index.html ──
 @app.route("/")
 def index():
     return send_from_directory("static", "index.html")
 
-
-#  HELPER — extract text from PDF
+# ── HELPER — extract text from PDF ──
 def extract_pdf_text(file_storage) -> str:
     filename = secure_filename(file_storage.filename)
     path = os.path.join(UPLOAD_FOLDER, filename)
@@ -45,99 +43,60 @@ def extract_pdf_text(file_storage) -> str:
         if os.path.exists(path):
             os.remove(path)
 
-
-
-#  HELPER — call Groq API
+# ── HELPER — call Groq API ──
 def ask_groq(system: str, user: str) -> str:
     payload = {
         "model": MODEL,
         "messages": [
             {"role": "system", "content": system},
-            {"role": "user",   "content": user},
+            {"role": "user", "content": user},
         ],
         "temperature": 0.3,
         "max_tokens": 2048,
-        "max_tokens": 1024,
     }
-
     resp = requests.post(GROQ_API_URL, headers=HEADERS, json=payload, timeout=30)
-
     if resp.status_code == 401:
         raise Exception("Invalid Groq API key. Open app.py and fix GROQ_API_KEY.")
-
     if resp.status_code == 429:
         raise Exception("Rate limit hit. Wait a few seconds and try again.")
-
     if resp.status_code != 200:
         raise Exception("Groq API error " + str(resp.status_code) + ": " + resp.text[:300])
-
     return resp.json()["choices"][0]["message"]["content"].strip()
 
-
-#   safely extract JSON from raw text
-
+# ── HELPER — parse JSON safely ──
 def clean_text(text: str) -> str:
-    """Remove control characters and fix common issues that break JSON."""
-    # Remove all control characters except normal whitespace
     text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
-    # Strip markdown fences
     text = re.sub(r'```(?:json)?|```', '', text)
-    # Replace curly/smart quotes with straight quotes
     text = text.replace('\u201c', '"').replace('\u201d', '"')
     text = text.replace('\u2018', "'").replace('\u2019', "'")
-    # Replace en-dash / em-dash inside strings with hyphen
     text = text.replace('\u2013', '-').replace('\u2014', '-')
     return text.strip()
 
-
 def parse_json(raw: str):
     cleaned = clean_text(raw)
-
-#  HELPER — safely extract JSON from raw text
-def parse_json(raw: str):
-    cleaned = re.sub(r'```(?:json)?|```', '', raw).strip()
     try:
         return json.loads(cleaned)
     except Exception:
         pass
-
-    # Try to find a JSON object {...}
     m = re.search(r'\{.*\}', cleaned, re.DOTALL)
     if m:
         try:
             return json.loads(m.group())
         except Exception:
-            # Last resort: aggressively clean inside the match
-            inner = m.group()
-            inner = re.sub(r'[\x00-\x1f\x7f]', ' ', inner)
+            inner = re.sub(r'[\x00-\x1f\x7f]', ' ', m.group())
             try:
                 return json.loads(inner)
             except Exception:
                 pass
-
-    # Try to find a JSON array [...]
     m = re.search(r'\[.*\]', cleaned, re.DOTALL)
     if m:
         try:
             return json.loads(m.group())
         except Exception:
             pass
-
     raise json.JSONDecodeError("No valid JSON found in response", raw, 0)
 
-
-#  NOTE LEVEL SPECS
-
-    m = re.search(r'\[.*\]', cleaned, re.DOTALL)
-    if m:
-        return json.loads(m.group())
-    m = re.search(r'\{.*\}', cleaned, re.DOTALL)
-    if m:
-        return json.loads(m.group())
-    raise json.JSONDecodeError("No JSON found in response", raw, 0)
-
-
-#  NOTE LEVEL SPECS
+# ── NOTE LEVEL SPECS ──
 LEVEL_PROMPTS = {
     0: (
         "You are an expert tutor. "
@@ -165,13 +124,10 @@ LEVEL_PROMPTS = {
     ),
 }
 
-
-#  /api/summary  — PDF Summarizer
-
+# ── /api/summary ──
 @app.route("/api/summary", methods=["POST"])
 def api_summary():
     text = request.form.get("text", "").strip()
-
     if not text and "pdf_file" in request.files:
         f = request.files["pdf_file"]
         if f and f.filename:
@@ -179,10 +135,8 @@ def api_summary():
                 text = extract_pdf_text(f)
             except Exception as e:
                 return jsonify({"error": "PDF read failed: " + str(e)}), 400
-
     if not text:
         return jsonify({"error": "No content provided."}), 400
-
     try:
         raw = ask_groq(
             "You are an expert academic summarizer. "
@@ -195,20 +149,15 @@ def api_summary():
         if not isinstance(bullets, list):
             raise ValueError("Expected a list")
         return jsonify({"bullets": bullets})
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-#  /api/flashcards  — Flashcard Creator
-
+# ── /api/flashcards ──
 @app.route("/api/flashcards", methods=["POST"])
 def api_flashcards():
     text = request.form.get("text", "").strip()
-
     if not text:
         return jsonify({"error": "No content provided."}), 400
-
     try:
         raw = ask_groq(
             "You are a study flashcard expert. "
@@ -221,14 +170,10 @@ def api_flashcards():
         if not isinstance(cards, list):
             raise ValueError("Expected a list")
         return jsonify({"cards": cards})
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-
-#  /api/notes  — Note Generator
-
+# ── /api/notes ──
 @app.route("/api/notes", methods=["POST"])
 def api_notes():
     topic = request.form.get("topic", "").strip()
@@ -238,34 +183,27 @@ def api_notes():
             level = 0
     except (ValueError, TypeError):
         level = 0
-
     if not topic:
         return jsonify({"error": "Topic is required."}), 400
-
     try:
         raw = ask_groq(LEVEL_PROMPTS[level], "Topic: " + topic)
         data = parse_json(raw)
         if not isinstance(data, dict):
             raise ValueError("Expected a dict")
         return jsonify({
-            "body":       data.get("body", ""),
-            "examples":   data.get("examples", []),
+            "body": data.get("body", ""),
+            "examples": data.get("examples", []),
             "practiceQs": data.get("practiceQs", []),
         })
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-#  /api/questions  — Question Generator
-
+# ── /api/questions ──
 @app.route("/api/questions", methods=["POST"])
 def api_questions():
     text = request.form.get("text", "").strip()
-
     if not text:
         return jsonify({"error": "No content provided."}), 400
-
     try:
         raw = ask_groq(
             "You are an expert exam paper setter. "
@@ -278,13 +216,9 @@ def api_questions():
         if not isinstance(questions, list):
             raise ValueError("Expected a list")
         return jsonify({"questions": questions})
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    print("StudyAI (Groq - Free & Fast) running -> http://localhost:5000")
-    app.run(debug=True, port=5000)
-if __name__ == "__main__":
-    print("StudyAI (Groq - Free & Fast) running -> http://localhost:5000")
+    print("StudyAI (Groq) running -> http://localhost:5000")
     app.run(debug=True, port=5000)
