@@ -19,7 +19,8 @@ HEADERS = {
     "Authorization": f"Bearer {GROQ_API_KEY}",
     "Content-Type": "application/json",
 }
-MODEL = "mixtral-8x7b-32768"
+MODEL = "llama-3.1-8b-instant"
+
 
 # ── SERVE index.html ──
 @app.route("/")
