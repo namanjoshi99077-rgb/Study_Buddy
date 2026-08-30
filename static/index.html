@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Study Buddy — AI Study Material Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,600;0,700;1,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root {
+    --bg: #f0ede8;
+    --surface: #faf9f7;
+    --surface2: #f5f2ee;
+    --border: #e2ddd8;
+    --text: #1a1714;
+    --text-muted: #7a7470;
+    --accent: #2563eb;
+    --accent-light: #dbeafe;
+    --accent2: #0f766e;
+    --accent2-light: #ccfbf1;
+    --accent3: #7c3aed;
+    --accent3-light: #ede9fe;
+    --accent4: #b45309;
+    --accent4-light: #fef3c7;
+    --shadow: 0 2px 16px rgba(26,23,20,0.08);
+    --shadow-lg: 0 8px 40px rgba(26,23,20,0.13);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px; text-decoration: none;
+    cursor: pointer;
+  }
+  .logo-icon {
+    width: 44px; height: 36px;
+    background: var(--text);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--surface);
+    font-family: 'Fraunces', serif;
+    font-size: 14px; font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .logo-text { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; color: var(--text); }
+
+  .back-btn {
+    display: none; align-items: center; gap: 6px;
+    background: none; border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 6px 14px; font-family: 'DM Sans', sans-serif; font-size: 14px;
+    font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all .2s;
+  }
+  .back-btn:hover { background: var(--surface2); color: var(--text); }
+  .back-btn.visible { display: flex; }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+
+  .hero { text-align: center; padding: 3.5rem 0 2.5rem; }
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 100px;
+    padding: 5px 14px; font-size: 12px; font-weight: 500; color: var(--text-muted);
+    letter-spacing: .04em; text-transform: uppercase; margin-bottom: 1.25rem;
+  }
+  .hero h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(2.2rem, 5vw, 3.5rem);
+    font-weight: 700; line-height: 1.15; color: var(--text); margin-bottom: .75rem;
+  }
+  .hero h1 em { font-style: italic; color: var(--accent); }
+  .hero p { font-size: 16px; color: var(--text-muted); max-width: 500px; margin: 0 auto; }
+
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.25rem; margin-top: 2.5rem;
+  }
+
+  .tool-card {
+    background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius);
+    padding: 1.75rem 1.5rem; cursor: pointer;
+    transition: transform .22s cubic-bezier(.34,1.56,.64,1), box-shadow .22s, border-color .2s;
+    position: relative; overflow: hidden;
+  }
+  .tool-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+
+  .card-1:hover { border-color: var(--accent); }
+  .card-1 .card-icon-wrap { background: var(--accent-light); }
+  .card-1 .card-icon { color: var(--accent); }
+  .card-1:hover .card-arrow { background: var(--accent); border-color: var(--accent); }
+
+  .card-2:hover { border-color: var(--accent2); }
+  .card-2 .card-icon-wrap { background: var(--accent2-light); }
+  .card-2 .card-icon { color: var(--accent2); }
+  .card-2:hover .card-arrow { background: var(--accent2); border-color: var(--accent2); }
+
+  .card-3:hover { border-color: var(--accent3); }
+  .card-3 .card-icon-wrap { background: var(--accent3-light); }
+  .card-3 .card-icon { color: var(--accent3); }
+  .card-3:hover .card-arrow { background: var(--accent3); border-color: var(--accent3); }
+
+  .card-4:hover { border-color: var(--accent4); }
+  .card-4 .card-icon-wrap { background: var(--accent4-light); }
+  .card-4 .card-icon { color: var(--accent4); }
+  .card-4:hover .card-arrow { background: var(--accent4); border-color: var(--accent4); }
+
+  .card-icon-wrap { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.1rem; }
+  .card-icon { width: 24px; height: 24px; }
+  .tool-card h3 { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; margin-bottom: .4rem; }
+  .tool-card p { font-size: 13.5px; color: var(--text-muted); line-height: 1.5; }
+  .card-arrow {
+    position: absolute; bottom: 1.5rem; right: 1.5rem;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--bg); border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity .2s, background .2s;
+  }
+  .tool-card:hover .card-arrow { opacity: 1; }
+  .card-arrow svg { color: white; width: 14px; height: 14px; }
+
+  .tool-view { display: none; animation: fadeIn .35s ease; }
+  .tool-view.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  .tool-header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 2rem 0 1.75rem; border-bottom: 1px solid var(--border); margin-bottom: 2rem;
+  }
+  .tool-header-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .tool-header-icon svg { width: 26px; height: 26px; }
+  .tool-header h2 { font-family: 'Fraunces', serif; font-size: 1.75rem; font-weight: 700; }
+  .tool-header p { font-size: 14px; color: var(--text-muted); margin-top: 2px; }
+
+  .form-section {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.25rem;
+  }
+  .form-section h4 {
+    font-size: 13px; font-weight: 600; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem;
+  }
+
+  .upload-zone {
+    border: 2px dashed var(--border); border-radius: var(--radius-sm);
+    padding: 2.5rem 1.5rem; text-align: center; cursor: pointer;
+    transition: border-color .2s, background .2s; position: relative;
+  }
+  .upload-zone:hover, .upload-zone.dragging { border-color: var(--accent); background: var(--accent-light); }
+  .upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-icon { width: 40px; height: 40px; margin: 0 auto 12px; color: var(--text-muted); }
+  .upload-zone p { font-size: 14px; color: var(--text-muted); }
+  .upload-zone strong { color: var(--accent); }
+  .file-name { margin-top: 10px; font-size: 13px; color: var(--accent2); font-weight: 500; }
+
+  textarea {
+    width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 14.5px;
+    color: var(--text); background: var(--surface2); resize: vertical; min-height: 130px;
+    transition: border-color .2s, background .2s; outline: none;
+  }
+  textarea:focus { border-color: var(--accent); background: var(--surface); }
+  textarea::placeholder { color: var(--text-muted); }
+
+  input[type=text] {
+    width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    padding: 11px 14px; font-family: 'DM Sans', sans-serif; font-size: 14.5px;
+    color: var(--text); background: var(--surface2); outline: none;
+    transition: border-color .2s, background .2s;
+  }
+  input[type=text]:focus { border-color: var(--accent); background: var(--surface); }
+
+  .level-toggle {
+    display: flex; background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 4px; gap: 4px;
+  }
+  .level-btn {
+    flex: 1; padding: 8px 12px; border: none; background: none; border-radius: 7px;
+    font-family: 'DM Sans', sans-serif; font-size: 13.5px; font-weight: 500;
+    color: var(--text-muted); cursor: pointer; transition: all .18s;
+  }
+  .level-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 6px rgba(26,23,20,.1); }
+  .level-desc {
+    margin-top: 10px; font-size: 13px; color: var(--text-muted);
+    padding: 8px 12px; background: var(--surface2); border-radius: 8px;
+    border-left: 3px solid var(--accent3);
+  }
+
+  .generate-btn {
+    width: 100%; padding: 13px; border: none; border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: all .2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .generate-btn:hover { filter: brightness(1.07); transform: translateY(-1px); }
+  .generate-btn:active { transform: translateY(0); }
+  .generate-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+  .btn-blue { background: var(--accent); color: white; }
+  .btn-teal { background: var(--accent2); color: white; }
+  .btn-purple { background: var(--accent3); color: white; }
+  .btn-amber { background: var(--accent4); color: white; }
+
+  .output-box {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius); padding: 1.5rem; display: none;
+  }
+  .output-box.visible { display: block; animation: fadeIn .3s ease; }
+  .output-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1rem; padding-bottom: .75rem; border-bottom: 1px solid var(--border);
+  }
+  .output-header h4 { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600; }
+  .copy-btn {
+    display: flex; align-items: center; gap: 6px; background: none;
+    border: 1.5px solid var(--border); border-radius: 7px; padding: 5px 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+    cursor: pointer; color: var(--text-muted); transition: all .18s;
+  }
+  .copy-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--text-muted); }
+  .copy-btn.copied { color: var(--accent2); border-color: var(--accent2); background: var(--accent2-light); }
+
+  .output-content { font-size: 14.5px; line-height: 1.75; color: var(--text); }
+  .output-content ul { list-style: none; padding: 0; }
+  .output-content ul li { padding: 7px 0 7px 22px; position: relative; border-bottom: 1px solid var(--border); }
+  .output-content ul li:last-child { border-bottom: none; }
+  .output-content ul li::before { content: '•'; position: absolute; left: 5px; color: var(--accent); font-weight: bold; font-size: 18px; line-height: 1.4; }
+
+  .flashcards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+  .flashcard {
+    background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); padding: 1.1rem; cursor: default;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .flashcard:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+  .fc-label { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent2); margin-bottom: 6px; }
+  .fc-q { font-size: 14px; font-weight: 600; color: var(--text); }
+  .fc-divider { height: 1px; background: var(--border); margin: 10px 0; }
+  .fc-a-label { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+  .fc-a { font-size: 13.5px; color: var(--text-muted); line-height: 1.5; }
+
+  .questions-list { list-style: none; padding: 0; }
+  .q-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+  .q-item:last-child { border-bottom: none; }
+  .q-num {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+  }
+  .q-text { font-size: 14.5px; line-height: 1.6; }
+
+  .loading {
+    display: none; align-items: center; justify-content: center; gap: 10px;
+    padding: 1.5rem; color: var(--text-muted); font-size: 14px;
+  }
+  .loading.visible { display: flex; }
+  .spinner {
+    width: 18px; height: 18px; border: 2.5px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .notes-body { font-size: 14.5px; line-height: 1.8; color: var(--text); margin-bottom: 12px; }
+  .ex-label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent3); margin-bottom: 8px; }
+  .example-tag {
+    display: inline-block; background: var(--accent3-light); color: var(--accent3);
+    border-radius: 6px; padding: 4px 10px; font-size: 13px; margin: 3px 4px 3px 0;
+  }
+  .practice-qs { margin-top: 14px; }
+  .pq-label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent4); margin-bottom: 8px; }
+  .pq-item {
+    font-size: 14px; padding: 9px 13px; background: var(--accent4-light);
+    border-radius: 8px; margin-bottom: 6px; color: var(--text); border-left: 3px solid var(--accent4);
+  }
+
+  @media (max-width: 640px) {
+    main { padding: 1rem; }
+    .hero { padding: 2rem 0 1.5rem; }
+    .cards-grid { grid-template-columns: 1fr 1fr; gap: .85rem; }
+    .tool-card { padding: 1.25rem 1rem; }
+  }
+  @media (max-width: 400px) { .cards-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo" onclick="goHome()" style="cursor:pointer">
+    <span class="logo-icon">SB</span>
+    <span class="logo-text">Study Buddy</span>
+  </div>
+  <button class="back-btn" id="backBtn" onclick="goHome()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    Back to Home
+  </button>
+</header>
+
+<main>
+
+  <!-- HOME -->
+  <div id="homeView">
+    <div class="hero">
+      <span class="hero-tag">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>
+        AI-Powered Learning Tools
+      </span>
+      <h1>Meet Your <em>Study Buddy</em> —<br>Powered by AI</h1>
+      <p>Study Buddy turns any PDF or text into summaries, flashcards, notes, and exam questions — instantly.</p>
+    </div>
+    <div class="cards-grid">
+      <div class="tool-card card-1" onclick="showTool('summarizer')">
+        <div class="card-icon-wrap">
+          <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <h3>PDF Summarizer</h3>
+        <p>Upload any PDF and get a clean, bullet-point summary of the key ideas.</p>
+        <div class="card-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+      </div>
+      <div class="tool-card card-2" onclick="showTool('flashcard')">
+        <div class="card-icon-wrap">
+          <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a1 1 0 00-1 1v3h10V4a1 1 0 00-1-1z"/></svg>
+        </div>
+        <h3>Flashcard Creator</h3>
+        <p>Turn notes or PDFs into Q&amp;A flashcard sets perfect for active recall study.</p>
+        <div class="card-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+      </div>
+      <div class="tool-card card-3" onclick="showTool('notes')">
+        <div class="card-icon-wrap">
+          <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </div>
+        <h3>Note Generator</h3>
+        <p>Generate structured notes at three depth levels — beginner to advanced.</p>
+        <div class="card-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+      </div>
+      <div class="tool-card card-4" onclick="showTool('questions')">
+        <div class="card-icon-wrap">
+          <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <h3>Question Generator</h3>
+        <p>Identify core concepts and generate the 5 most important exam-style questions.</p>
+        <div class="card-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOOL 1: PDF SUMMARIZER -->
+  <div id="summarizer" class="tool-view">
+    <div class="tool-header">
+      <div class="tool-header-icon" style="background:var(--accent-light)">
+        <svg style="color:var(--accent)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      </div>
+      <div>
+        <h2>PDF Summarizer</h2>
+        <p>Upload a PDF to extract key points as a concise bullet-point summary</p>
+      </div>
+    </div>
+    <div class="form-section">
+      <h4>Upload PDF</h4>
+      <div class="upload-zone" id="sumUploadZone">
+        <input type="file" accept=".pdf" id="sumPdfInput" onchange="handleFileUpload('sum')">
+        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p>Drop your PDF here or <strong>browse files</strong></p>
+        <p style="font-size:12px;margin-top:4px">Supports PDF files up to 20MB</p>
+        <div class="file-name" id="sumFileName"></div>
+      </div>
+    </div>
+    <button class="generate-btn btn-blue" id="sumBtn" onclick="generateSummary()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Generate Summary
+    </button>
+    <div class="loading" id="sumLoading" style="margin-top:1rem">
+      <div class="spinner"></div> Extracting text and summarizing…
+    </div>
+    <div class="output-box" id="sumOutput" style="margin-top:1.25rem">
+      <div class="output-header">
+        <h4>📄 Summary</h4>
+        <button class="copy-btn" onclick="copyOutput('sumContent', this)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copy
+        </button>
+      </div>
+      <div class="output-content" id="sumContent"></div>
+    </div>
+  </div>
+
+  <!-- TOOL 2: FLASHCARD CREATOR -->
+  <div id="flashcard" class="tool-view">
+    <div class="tool-header">
+      <div class="tool-header-icon" style="background:var(--accent2-light)">
+        <svg style="color:var(--accent2)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a1 1 0 00-1 1v3h10V4a1 1 0 00-1-1z"/></svg>
+      </div>
+      <div>
+        <h2>Flashcard Creator</h2>
+        <p>Paste text or upload a PDF to generate study flashcards</p>
+      </div>
+    </div>
+    <div class="form-section">
+      <h4>Input</h4>
+      <textarea id="fcText" placeholder="Paste your study notes, chapter text, or any content here…" rows="6"></textarea>
+      <p style="font-size:12.5px;color:var(--text-muted);margin:10px 0 12px;text-align:center">— or upload a PDF below —</p>
+      <div class="upload-zone" id="fcUploadZone">
+        <input type="file" accept=".pdf" id="fcPdfInput" onchange="handleFileUpload('fc')">
+        <svg style="width:28px;height:28px;margin:0 auto 8px;display:block;color:var(--text-muted)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <p>Upload a PDF instead</p>
+        <div class="file-name" id="fcFileName"></div>
+      </div>
+    </div>
+    <button class="generate-btn btn-teal" id="fcBtn" onclick="generateFlashcards()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Create Flashcards
+    </button>
+    <div class="loading" id="fcLoading" style="margin-top:1rem">
+      <div class="spinner" style="border-top-color:var(--accent2)"></div> Generating flashcards…
+    </div>
+    <div class="output-box" id="fcOutput" style="margin-top:1.25rem">
+      <div class="output-header">
+        <h4>🃏 Flashcards</h4>
+        <button class="copy-btn" onclick="copyOutput('fcContent', this)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copy All
+        </button>
+      </div>
+      <div id="fcContent"></div>
+    </div>
+  </div>
+
+  <!-- TOOL 3: NOTE GENERATOR -->
+  <div id="notes" class="tool-view">
+    <div class="tool-header">
+      <div class="tool-header-icon" style="background:var(--accent3-light)">
+        <svg style="color:var(--accent3)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </div>
+      <div>
+        <h2>Multi-Level Note Generator</h2>
+        <p>Enter a topic and choose your depth level for tailored study notes</p>
+      </div>
+    </div>
+    <div class="form-section">
+      <h4>Topic</h4>
+      <input type="text" id="notesTopic" placeholder="e.g. Photosynthesis, World War II, Newton's Laws…">
+    </div>
+    <div class="form-section">
+      <h4>Complexity Level</h4>
+      <div class="level-toggle">
+        <button class="level-btn active" onclick="setLevel(0, this)">🌱 Low</button>
+        <button class="level-btn" onclick="setLevel(1, this)">📚 Medium</button>
+        <button class="level-btn" onclick="setLevel(2, this)">🔬 Advanced</button>
+      </div>
+      <div class="level-desc" id="levelDesc">25–50 words overview with 1 simple example. Great for a quick recap.</div>
+    </div>
+    <button class="generate-btn btn-purple" id="notesBtn" onclick="generateNotes()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Generate Notes
+    </button>
+    <div class="loading" id="notesLoading" style="margin-top:1rem">
+      <div class="spinner" style="border-top-color:var(--accent3)"></div> Crafting your notes…
+    </div>
+    <div class="output-box" id="notesOutput" style="margin-top:1.25rem">
+      <div class="output-header">
+        <h4>📝 Notes</h4>
+        <button class="copy-btn" onclick="copyOutput('notesContent', this)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copy
+        </button>
+      </div>
+      <div id="notesContent" class="output-content"></div>
+    </div>
+  </div>
+
+  <!-- TOOL 4: QUESTION GENERATOR -->
+  <div id="questions" class="tool-view">
+    <div class="tool-header">
+      <div class="tool-header-icon" style="background:var(--accent4-light)">
+        <svg style="color:var(--accent4)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div>
+        <h2>Smart Question Generator</h2>
+        <p>Identify key concepts and generate the 5 most important exam-style questions</p>
+      </div>
+    </div>
+    <div class="form-section">
+      <h4>Input Content</h4>
+      <textarea id="qText" placeholder="Paste chapter content, lecture notes, or any material here…" rows="6"></textarea>
+      <p style="font-size:12.5px;color:var(--text-muted);margin:10px 0 12px;text-align:center">— or upload a PDF below —</p>
+      <div class="upload-zone" id="qUploadZone">
+        <input type="file" accept=".pdf" id="qPdfInput" onchange="handleFileUpload('q')">
+        <svg style="width:28px;height:28px;margin:0 auto 8px;display:block;color:var(--text-muted)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <p>Upload a PDF instead</p>
+        <div class="file-name" id="qFileName"></div>
+      </div>
+    </div>
+    <button class="generate-btn btn-amber" id="qBtn" onclick="generateQuestions()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Generate Questions
+    </button>
+    <div class="loading" id="qLoading" style="margin-top:1rem">
+      <div class="spinner" style="border-top-color:var(--accent4)"></div> Analyzing content…
+    </div>
+    <div class="output-box" id="qOutput" style="margin-top:1.25rem">
+      <div class="output-header">
+        <h4>❓ Exam Questions</h4>
+        <button class="copy-btn" onclick="copyOutput('qContent', this)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copy
+        </button>
+      </div>
+      <div id="qContent" class="output-content"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+</script>
+<script>
+/* ── NAVIGATION ── */
+const extractedTexts = { sum: '', fc: '', q: '' };
+
+function showTool(id) {
+  document.getElementById('homeView').style.display = 'none';
+  document.querySelectorAll('.tool-view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('backBtn').classList.add('visible');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Push a history state so browser back button works too
+  history.pushState({ tool: id }, '', '#' + id);
+}
+
+function goHome() {
+  document.getElementById('homeView').style.display = 'block';
+  document.querySelectorAll('.tool-view').forEach(v => v.classList.remove('active'));
+  document.getElementById('backBtn').classList.remove('visible');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  history.pushState({ tool: null }, '', window.location.pathname);
+}
+
+// Handle browser back/forward buttons
+window.addEventListener('popstate', function(e) {
+  if (e.state && e.state.tool) {
+    document.getElementById('homeView').style.display = 'none';
+    document.querySelectorAll('.tool-view').forEach(v => v.classList.remove('active'));
+    document.getElementById(e.state.tool).classList.add('active');
+    document.getElementById('backBtn').classList.add('visible');
+  } else {
+    document.getElementById('homeView').style.display = 'block';
+    document.querySelectorAll('.tool-view').forEach(v => v.classList.remove('active'));
+    document.getElementById('backBtn').classList.remove('visible');
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+/* ── PDF EXTRACTION ── */
+async function extractPdfText(file) {
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  let text = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(it => it.str).join(' ') + '\n';
+  }
+  return text.trim();
+}
+
+async function handleFileUpload(prefix) {
+  const input = document.getElementById(prefix + 'PdfInput');
+  const nameEl = document.getElementById(prefix + 'FileName');
+  const file = input.files[0];
+  if (!file) return;
+  nameEl.textContent = '⏳ Reading ' + file.name + '…';
+  try {
+    const text = await extractPdfText(file);
+    extractedTexts[prefix] = text;
+    nameEl.textContent = '✅ ' + file.name + ' — ' + text.split(/\s+/).length + ' words extracted';
+    const taMap = { fc: 'fcText', q: 'qText' };
+    if (taMap[prefix]) document.getElementById(taMap[prefix]).value = text.substring(0, 3000);
+  } catch(e) {
+    nameEl.textContent = '❌ Could not read PDF. Try another file.';
+  }
+}
+
+/* ── HELPER — POST FormData to Flask ── */
+async function postToFlask(url, formData) {
+  const res = await fetch(url, { method: 'POST', body: formData });
+  const data = await res.json();
+  if (!res.ok || data.error) throw new Error(data.error || 'Server error');
+  return data;
+}
+
+/* ── TOOL 1: SUMMARIZER ── */
+async function generateSummary() {
+  const text = extractedTexts.sum;
+  if (!text) { alert('Please upload a PDF first.'); return; }
+  setLoading('sum', true);
+  try {
+    const fd = new FormData();
+    fd.append('text', text);
+    const data = await postToFlask('/api/summary', fd);
+    const ul = document.createElement('ul');
+    data.bullets.forEach(b => { const li = document.createElement('li'); li.textContent = b; ul.appendChild(li); });
+    const el = document.getElementById('sumContent');
+    el.innerHTML = ''; el.appendChild(ul);
+    showOutput('sumOutput');
+  } catch(e) {
+    document.getElementById('sumContent').innerHTML = '<p style="color:#dc2626;font-size:14px">⚠️ ' + e.message + '</p>';
+    showOutput('sumOutput');
+  }
+  setLoading('sum', false);
+}
+
+/* ── TOOL 2: FLASHCARDS ── */
+async function generateFlashcards() {
+  const text = document.getElementById('fcText').value.trim() || extractedTexts.fc;
+  if (!text) { alert('Please enter some text or upload a PDF.'); return; }
+  setLoading('fc', true);
+  try {
+    const fd = new FormData();
+    fd.append('text', text);
+    const data = await postToFlask('/api/flashcards', fd);
+    const grid = document.createElement('div');
+    grid.className = 'flashcards-grid';
+    data.cards.forEach(c => {
+      const d = document.createElement('div');
+      d.className = 'flashcard';
+      d.innerHTML = `<div class="fc-label">Question</div><div class="fc-q">${escHtml(c.q)}</div><div class="fc-divider"></div><div class="fc-a-label">Answer</div><div class="fc-a">${escHtml(c.a)}</div>`;
+      grid.appendChild(d);
+    });
+    const el = document.getElementById('fcContent');
+    el.innerHTML = ''; el.appendChild(grid);
+    showOutput('fcOutput');
+  } catch(e) {
+    document.getElementById('fcContent').innerHTML = '<p style="color:#dc2626;font-size:14px">⚠️ ' + e.message + '</p>';
+    showOutput('fcOutput');
+  }
+  setLoading('fc', false);
+}
+
+/* ── TOOL 3: NOTES ── */
+let noteLevel = 0;
+const levelMeta = [
+  { desc: '25–50 words overview with 1 simple example. Great for a quick recap.' },
+  { desc: '75–100 words with multiple examples. Suitable for intermediate study.' },
+  { desc: '100–200 words + examples + 3 practice questions. For deep understanding.' }
+];
+
+function setLevel(idx, btn) {
+  noteLevel = idx;
+  document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('levelDesc').textContent = levelMeta[idx].desc;
+}
+
+async function generateNotes() {
+  const topic = document.getElementById('notesTopic').value.trim();
+  if (!topic) { alert('Please enter a topic.'); return; }
+  setLoading('notes', true);
+  try {
+    const fd = new FormData();
+    fd.append('topic', topic);
+    fd.append('level', noteLevel);
+    const data = await postToFlask('/api/notes', fd);
+    let html = `<div class="notes-body">${escHtml(data.body)}</div>`;
+    if (data.examples && data.examples.length) {
+      html += `<div style="margin-top:12px"><div class="ex-label">Examples</div>`;
+      data.examples.forEach(ex => { html += `<span class="example-tag">💡 ${escHtml(ex)}</span>`; });
+      html += `</div>`;
+    }
+    if (data.practiceQs && data.practiceQs.length) {
+      html += `<div class="practice-qs"><div class="pq-label">Practice Questions</div>`;
+      data.practiceQs.forEach(q => { html += `<div class="pq-item">🖊 ${escHtml(q)}</div>`; });
+      html += `</div>`;
+    }
+    document.getElementById('notesContent').innerHTML = html;
+    showOutput('notesOutput');
+  } catch(e) {
+    document.getElementById('notesContent').innerHTML = '<p style="color:#dc2626;font-size:14px">⚠️ ' + e.message + '</p>';
+    showOutput('notesOutput');
+  }
+  setLoading('notes', false);
+}
+
+/* ── TOOL 4: QUESTIONS ── */
+async function generateQuestions() {
+  const text = document.getElementById('qText').value.trim() || extractedTexts.q;
+  if (!text) { alert('Please enter some text or upload a PDF.'); return; }
+  setLoading('q', true);
+  try {
+    const fd = new FormData();
+    fd.append('text', text);
+    const data = await postToFlask('/api/questions', fd);
+    const colors = ['#2563eb','#0f766e','#7c3aed','#b45309','#dc2626'];
+    let html = '<ol class="questions-list">';
+    data.questions.forEach((q, i) => {
+      html += `<li class="q-item"><span class="q-num" style="background:${colors[i]}22;color:${colors[i]}">${i+1}</span><span class="q-text">${escHtml(q)}</span></li>`;
+    });
+    html += '</ol>';
+    document.getElementById('qContent').innerHTML = html;
+    showOutput('qOutput');
+  } catch(e) {
+    document.getElementById('qContent').innerHTML = '<p style="color:#dc2626;font-size:14px">⚠️ ' + e.message + '</p>';
+    showOutput('qOutput');
+  }
+  setLoading('q', false);
+}
+
+/* ── COPY TO CLIPBOARD ── */
+function copyOutput(contentId, btn) {
+  const text = document.getElementById(contentId).innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.classList.add('copied');
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy`;
+    }, 2500);
+  });
+}
+
+/* ── HELPERS ── */
+function setLoading(prefix, on) {
+  const loading = document.getElementById(prefix + 'Loading');
+  const btn = document.getElementById(prefix + 'Btn');
+  if (on) { loading.classList.add('visible'); if(btn) btn.disabled = true; }
+  else { loading.classList.remove('visible'); if(btn) btn.disabled = false; }
+}
+function showOutput(id) {
+  const el = document.getElementById(id);
+  el.classList.add('visible');
+  setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* Drag-over effects */
+document.querySelectorAll('.upload-zone').forEach(zone => {
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragging'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragging'));
+  zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragging'); });
+});
+</script>
+</body>
+</html>
