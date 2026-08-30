@@ -12,7 +12,7 @@ app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20 MB
 UPLOAD_FOLDER = "/tmp/studyai"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "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")
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 HEADERS = {
