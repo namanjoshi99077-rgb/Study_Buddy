@@ -19,8 +19,7 @@ HEADERS = {
     "Authorization": f"Bearer {GROQ_API_KEY}",
     "Content-Type": "application/json",
 }
-MODEL = "llama-3.1-8b-instant"
-
+MODEL = "openai/gpt-oss-20b"
 
 # ── SERVE index.html ──
 @app.route("/")
