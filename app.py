@@ -6,13 +6,25 @@ import pdfplumber
 from flask import Flask, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 
+<<<<<<< HEAD
 #  SETUP
 app = Flask(__name__, static_folder="static")
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20 MB
 
 UPLOAD_FOLDER = "/tmp/studyai"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "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")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+=======
+
+app = Flask(__name__, static_folder="static")
+app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  
+
+UPLOAD_FOLDER = "C:/tmp/studyai"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+GROQ_API_KEY = "Groq_API"
+
+>>>>>>> ac749c403f7dc6903b9261c750d21adb90277ebc
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 HEADERS = {
     "Authorization": f"Bearer {GROQ_API_KEY}",
@@ -23,7 +35,11 @@ HEADERS = {
 MODEL = "llama-3.1-8b-instant"
 
 
+<<<<<<< HEAD
 #  SERVE index.html
+=======
+
+>>>>>>> ac749c403f7dc6903b9261c750d21adb90277ebc
 @app.route("/")
 def index():
     return send_from_directory("static", "index.html")
@@ -47,8 +63,12 @@ def extract_pdf_text(file_storage) -> str:
             os.remove(path)
 
 
+<<<<<<< HEAD
 #   call Groq API
 
+=======
+#  HELPER — call Groq API
+>>>>>>> ac749c403f7dc6903b9261c750d21adb90277ebc
 def ask_groq(system: str, user: str) -> str:
     payload = {
         "model": MODEL,
@@ -57,7 +77,11 @@ def ask_groq(system: str, user: str) -> str:
             {"role": "user",   "content": user},
         ],
         "temperature": 0.3,
+<<<<<<< HEAD
         "max_tokens": 2048,
+=======
+        "max_tokens": 1024,
+>>>>>>> ac749c403f7dc6903b9261c750d21adb90277ebc
     }
 
     resp = requests.post(GROQ_API_URL, headers=HEADERS, json=payload, timeout=30)
@@ -74,6 +98,7 @@ def ask_groq(system: str, user: str) -> str:
     return resp.json()["choices"][0]["message"]["content"].strip()
 
 
+<<<<<<< HEAD
 #   safely extract JSON from raw text
 
 def clean_text(text: str) -> str:
@@ -94,10 +119,16 @@ def parse_json(raw: str):
     cleaned = clean_text(raw)
 
     # Try direct parse
+=======
+#  HELPER — safely extract JSON from raw text
+def parse_json(raw: str):
+    cleaned = re.sub(r'```(?:json)?|```', '', raw).strip()
+>>>>>>> ac749c403f7dc6903b9261c750d21adb90277ebc
     try:
         return json.loads(cleaned)
     except Exception:
         pass
+<<<<<<< HEAD
 
     # Try to find a JSON object {...}
     m = re.search(r'\{.*\}', cleaned, re.DOTALL)
@@ -126,12 +157,27 @@ def parse_json(raw: str):
 
 #  NOTE LEVEL SPECS
 
+=======
+    m = re.search(r'\[.*\]', cleaned, re.DOTALL)
+    if m:
+        return json.loads(m.group())
+    m = re.search(r'\{.*\}', cleaned, re.DOTALL)
+    if m:
+        return json.loads(m.group())
+    raise json.JSONDecodeError("No JSON found in response", raw, 0)
+
+
+#  NOTE LEVEL SPECS
+>>>>>>> ac749c403f7dc6903b9261c750d21adb90277ebc
 LEVEL_PROMPTS = {
     0: (
         "You are an expert tutor. "
         "Write a 25-50 word beginner-friendly overview of the given topic. "
         "Include exactly 1 simple real-world example. "
+<<<<<<< HEAD
         "IMPORTANT: Use only plain ASCII characters. No special quotes, no dashes, no symbols. "
+=======
+>>>>>>> ac749c403f7dc6903b9261c750d21adb90277ebc
         "Return ONLY this raw JSON, no extra text, no markdown:\n"
         '{"body":"your overview here","examples":["one real example"],"practiceQs":[]}'
     ),
@@ -139,7 +185,10 @@ LEVEL_PROMPTS = {
         "You are an expert tutor. "
         "Write a 75-100 word intermediate explanation of the given topic. "
         "Include 2-3 real-world examples. "
+<<<<<<< HEAD
         "IMPORTANT: Use only plain ASCII characters. No special quotes, no dashes, no symbols. "
+=======
+>>>>>>> ac749c403f7dc6903b9261c750d21adb90277ebc
         "Return ONLY this raw JSON, no extra text, no markdown:\n"
         '{"body":"your explanation here","examples":["example 1","example 2","example 3"],"practiceQs":[]}'
     ),
@@ -147,7 +196,10 @@ LEVEL_PROMPTS = {
         "You are an expert tutor. "
         "Write a 100-200 word advanced explanation of the given topic with depth and nuance. "
         "Include 2-3 examples and exactly 3 exam-style practice questions. "
+<<<<<<< HEAD
         "IMPORTANT: Use only plain ASCII characters. No special quotes, no dashes, no symbols. "
+=======
+>>>>>>> ac749c403f7dc6903b9261c750d21adb90277ebc
         "Return ONLY this raw JSON, no extra text, no markdown:\n"
         '{"body":"your explanation here","examples":["example 1","example 2"],"practiceQs":["question 1","question 2","question 3"]}'
     ),
@@ -155,7 +207,10 @@ LEVEL_PROMPTS = {
 
 
 #  /api/summary  — PDF Summarizer
+<<<<<<< HEAD
 
+=======
+>>>>>>> ac749c403f7dc6903b9261c750d21adb90277ebc
 @app.route("/api/summary", methods=["POST"])
 def api_summary():
     text = request.form.get("text", "").strip()
@@ -189,7 +244,10 @@ def api_summary():
 
 
 #  /api/flashcards  — Flashcard Creator
+<<<<<<< HEAD
 
+=======
+>>>>>>> ac749c403f7dc6903b9261c750d21adb90277ebc
 @app.route("/api/flashcards", methods=["POST"])
 def api_flashcards():
     text = request.form.get("text", "").strip()
@@ -214,6 +272,10 @@ def api_flashcards():
         return jsonify({"error": str(e)}), 500
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> ac749c403f7dc6903b9261c750d21adb90277ebc
 #  /api/notes  — Note Generator
 
 @app.route("/api/notes", methods=["POST"])
@@ -245,7 +307,10 @@ def api_notes():
 
 
 #  /api/questions  — Question Generator
+<<<<<<< HEAD
 
+=======
+>>>>>>> ac749c403f7dc6903b9261c750d21adb90277ebc
 @app.route("/api/questions", methods=["POST"])
 def api_questions():
     text = request.form.get("text", "").strip()
@@ -269,7 +334,13 @@ def api_questions():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+<<<<<<< HEAD
 
 if __name__ == "__main__":
     print("StudyAI (Groq - Free & Fast) running -> http://localhost:5000")
     app.run(debug=True, port=5000)
+=======
+if __name__ == "__main__":
+    print("StudyAI (Groq - Free & Fast) running -> http://localhost:5000")
+    app.run(debug=True, port=5000)
+>>>>>>> ac749c403f7dc6903b9261c750d21adb90277ebc
